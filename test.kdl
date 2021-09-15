@@ -1,0 +1,7 @@
+firstkey "first
+	tab\nnewline
+val"
+thirdkey true null
+secondkey 12 "test" null false "testagain"
+anotherkey "true" 123543 null true
+moreKeys false true
