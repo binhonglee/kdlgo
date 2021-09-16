@@ -1,9 +1,10 @@
 firstkey "first
 	tab\nnewline
 val" r###"testing""###
+numbers 543 234 85720394
 thirdkey true null
 secondkey 12 "test" null false "testagain"
-anotherkey "true" 123543 null true
+anotherkey "true" 123.543 null true
 moreKeys false true
 keyonly
 testcomment /-"comment ull"

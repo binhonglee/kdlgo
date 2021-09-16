@@ -259,7 +259,7 @@ func parseNumber(key string, start rune) (KDLNumber, error) {
 
 	for {
 		r, err := peek()
-		if r != ';' {
+		if r != ';' && r != '\n' {
 			discard(1)
 		}
 		if err != nil && err.Error() != EOF {

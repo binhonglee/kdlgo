@@ -12,13 +12,14 @@ func TestParseFromFile(t *testing.T) {
 	}
 	expected := []string{
 		`firstkey "first\n\ttab\nnewline\nval" r"testing""`,
+		`numbers 543 234 85720394`,
 		`thirdkey true null`,
-		`secondkey 1.2E+01 "test" null false "testagain"`,
-		`anotherkey "true" 1.23543E+05 null true`,
+		`secondkey 12 "test" null false "testagain"`,
+		`anotherkey "true" 123.543 null true`,
 		`moreKeys false true`,
 		`keyonly`,
 		`testcomment`,
-		`objects { node1 1.2E+01; node2 "string"; node3 null; }`,
+		`objects { node1 12; node2 "string"; node3 null; }`,
 		`multiline-node "random"`,
 	}
 
@@ -30,7 +31,7 @@ func TestParseFromFile(t *testing.T) {
 	}
 
 	for i, obj := range objs.GetValue().Objects {
-		s, err := KDLObjToString(obj)
+		s, err := RecreateKDLObj(obj)
 		if err != nil {
 			t.Fatal(err)
 			return

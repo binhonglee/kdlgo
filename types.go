@@ -1,7 +1,6 @@
 package kdlgo
 
 import (
-	"errors"
 	"math/big"
 	"strconv"
 	"strings"
@@ -31,14 +30,14 @@ type KDLValue struct {
 	Type KDLType
 }
 
-func (kdlValue KDLValue) ToString() (string, error) {
+func (kdlValue KDLValue) RecreateKDL() (string, error) {
 	switch kdlValue.Type {
 	case KDLBoolType:
 		return strconv.FormatBool(kdlValue.Bool), nil
 	case KDLNumberType:
 		num := kdlValue.Number
 		f64, _ := num.Float64()
-		return strconv.FormatFloat(f64, 'E', -1, 64), nil
+		return strconv.FormatFloat(f64, 'f', -1, 64), nil
 	case KDLStringType:
 		return strconv.Quote(kdlValue.String), nil
 	case KDLRawStringType:
@@ -46,7 +45,7 @@ func (kdlValue KDLValue) ToString() (string, error) {
 	case KDLDocumentType:
 		var s strings.Builder
 		for i, v := range kdlValue.Document {
-			str, err := v.ToString()
+			str, err := v.RecreateKDL()
 			if err != nil {
 				return "", err
 			}
@@ -63,7 +62,7 @@ func (kdlValue KDLValue) ToString() (string, error) {
 	case KDLObjectsType:
 		var s strings.Builder
 		for _, obj := range kdlValue.Objects {
-			objStr, err := KDLObjToString(obj)
+			objStr, err := RecreateKDLObj(obj)
 			if err != nil {
 				return "", err
 			}
@@ -71,7 +70,20 @@ func (kdlValue KDLValue) ToString() (string, error) {
 		}
 		return "{ " + s.String() + "}", nil
 	default:
-		return "", errors.New("Invalid KDLType")
+		return "", invalidTypeErr()
+	}
+}
+
+func (kdlValue KDLValue) ToString() (string, error) {
+	switch kdlValue.Type {
+	case KDLStringType:
+		return kdlValue.String, nil
+	case KDLRawStringType:
+		return kdlValue.RawString, nil
+	case KDLBoolType, KDLNumberType, KDLDocumentType, KDLNullType, KDLDefaultType, KDLObjectsType:
+		fallthrough
+	default:
+		return kdlValue.RecreateKDL()
 	}
 }
 
@@ -80,8 +92,8 @@ type KDLObject interface {
 	GetValue() KDLValue
 }
 
-func KDLObjToString(kdlObj KDLObject) (string, error) {
-	s, err := kdlObj.GetValue().ToString()
+func RecreateKDLObj(kdlObj KDLObject) (string, error) {
+	s, err := kdlObj.GetValue().RecreateKDL()
 	if err != nil {
 		return "", nil
 	}

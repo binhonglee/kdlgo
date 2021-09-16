@@ -12,6 +12,7 @@ const (
 	KDLDifferentKey   = "All keys of KDLObject to convert to document should be the same"
 	KDLInvalidKeyChar = "Invalid character for key"
 	KDLInvalidSyntax  = "Invalid syntax"
+	KDLInvalidType    = "Invalid KDLType"
 
 	// These should be caught and handled internally
 	kdlKeyOnly  = "Key only"
@@ -36,6 +37,10 @@ func invalidKeyCharErr() error {
 
 func invalidSyntaxErr() error {
 	return errors.New(KDLInvalidSyntax)
+}
+
+func invalidTypeErr() error {
+	return errors.New(KDLInvalidType)
 }
 
 func keyOnlyErr() error {
