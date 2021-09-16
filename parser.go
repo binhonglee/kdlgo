@@ -1,8 +1,7 @@
-package main
+package kdlgo
 
 import (
 	"bufio"
-	"errors"
 	"math/big"
 	"os"
 	"strconv"
@@ -10,70 +9,123 @@ import (
 	"unicode"
 )
 
-func ParseFile(fullfilepath string) ([]KDLObject, error) {
+const EOF = "EOF"
+
+func ParseFile(fullfilepath string) (KDLObjects, error) {
+	var t KDLObjects
 	f, err := os.Open(fullfilepath)
 	if err != nil {
-		return nil, err
+		return t, err
 	}
 	r := bufio.NewReader(f)
 	return ParseReader(r)
 }
 
-func ParseReader(reader *bufio.Reader) ([]KDLObject, error) {
+func ParseReader(reader *bufio.Reader) (KDLObjects, error) {
+	setReader(reader)
+	return parseObjects(false, "")
+}
+
+func parseObjects(hasOpen bool, key string) (KDLObjects, error) {
+	var t KDLObjects
 	var objects []KDLObject
 	for {
-		obj, err := parseObject(reader)
+		obj, err := parseObject()
 		if err == nil {
 			objects = append(objects, obj)
-		} else if err.Error() == "EOF" {
+		} else if err.Error() == EOF || err.Error() == kdlEndOfObj {
 			if obj != nil {
 				objects = append(objects, obj)
 			}
-			return objects, nil
+			return NewKDLObjects(key, objects), nil
 		} else {
-			return nil, err
+			return t, wrapError(err)
 		}
 	}
 }
 
-func parseObject(reader *bufio.Reader) (KDLObject, error) {
-	key, err := parseKey(reader)
+func parseObject() (KDLObject, error) {
+	for {
+		r, err := peek()
+		if err != nil {
+			return nil, err
+		}
+
+		if r == '}' {
+			discard(1)
+			return nil, endOfObjErr()
+		}
+
+		if !unicode.IsSpace(r) {
+			break
+		}
+
+		discard(1)
+	}
+
+	key, err := parseKey()
+
 	if err != nil {
+		if err.Error() == kdlKeyOnly {
+			return NewKDLDefault(key), nil
+		}
 		return nil, err
 	}
 
 	var objects []KDLObject
 	for {
-		r, _, err := reader.ReadRune()
-		if err != nil && err.Error() != "EOF" {
+		r, err := readRune()
+		if err != nil && err.Error() != EOF {
 			return nil, err
 		}
 
-		if r == '\n' || (err != nil && err.Error() == "EOF") {
+		if r == '\\' {
+			peek, err := peek()
+			if err == nil && peek == '\n' {
+				discard(1)
+				continue
+			}
+		}
+
+		if r == '\n' || r == ';' ||
+			(err != nil && err.Error() == EOF) {
 			if len(objects) == 0 {
-				return nil, errors.New("Missing value")
+				return NewKDLDefault(key), nil
 			} else if len(objects) == 1 {
 				return objects[0], nil
 			} else {
-				return ConvertToDocument(key, objects)
+				return ConvertToDocument(objects)
 			}
 		} else if unicode.IsSpace(r) {
 			continue
 		}
 
-		obj, err := parseValue(reader, key, r)
-		objects = append(objects, obj)
+		skipNext := false
+		peek, _ := peek()
+		if r == '/' && peek == '-' {
+			discard(1)
+			r, err = readRune()
+			if err != nil {
+				return nil, err
+			}
+			skipNext = true
+		}
+
+		obj, err := parseValue(key, r)
+		if !skipNext {
+			objects = append(objects, obj)
+		}
 		if err != nil {
 			return nil, err
 		}
 	}
 }
 
-func parseKey(reader *bufio.Reader) (string, error) {
+func parseKey() (string, error) {
 	var key strings.Builder
 
 	for {
-		r, _, err := reader.ReadRune()
+		r, err := readRune()
 		if err != nil {
 			return key.String(), err
 		}
@@ -81,52 +133,52 @@ func parseKey(reader *bufio.Reader) (string, error) {
 		if unicode.IsSpace(r) {
 			if len(key.String()) < 1 {
 				continue
+			} else if r == '\n' {
+				return key.String(), keyOnlyErr()
 			} else {
 				return key.String(), nil
 			}
 		}
 
-		var valid bool
-
-		valid = unicode.IsLetter(r)
-		if !valid && len(key.String()) > 1 {
-			valid = unicode.IsNumber(r)
-		}
-
-		if !valid {
-			return key.String(), errors.New("Invalid character for key.")
+		invalid :=
+			(len(key.String()) < 1 && unicode.IsNumber(r)) ||
+				unicode.IsSpace(r) || r == '=' || r == '"'
+		if invalid {
+			return key.String(), invalidKeyCharErr()
 		}
 		key.WriteRune(r)
 	}
 }
 
-func parseValue(reader *bufio.Reader, key string, r rune) (KDLObject, error) {
+func parseValue(key string, r rune) (KDLObject, error) {
 	if unicode.IsNumber(r) {
-		return parseNumber(reader, key, r)
+		return parseNumber(key, r)
 	}
 
 	switch r {
 	case '"':
-		return parseString(reader, key)
+		return parseString(key)
 	case 'n':
-		return parseNull(reader, key)
+		return parseNull(key)
 	case 't':
 		fallthrough
 	case 'f':
-		return parseBool(reader, key, r)
+		return parseBool(key, r)
 	case 'r':
-		return parseRawString(reader, key)
+		return parseRawString(key)
+	case '{':
+		return parseObjects(true, key)
 	}
 
-	return nil, errors.New("Eh")
+	return nil, invalidSyntaxErr()
 }
 
-func parseString(reader *bufio.Reader, key string) (KDLString, error) {
+func parseString(key string) (KDLString, error) {
 	var kdls KDLString
 	var s strings.Builder
 
 	for {
-		r, _, err := reader.ReadRune()
+		r, err := readRune()
 		if err != nil {
 			return kdls, err
 		}
@@ -139,14 +191,14 @@ func parseString(reader *bufio.Reader, key string) (KDLString, error) {
 	}
 }
 
-func parseRawString(reader *bufio.Reader, key string) (KDLRawString, error) {
+func parseRawString(key string) (KDLRawString, error) {
 	var kdlrs KDLRawString
 	var s strings.Builder
 
 	count := 0
 
 	for {
-		r, _, err := reader.ReadRune()
+		r, err := readRune()
 		if err != nil {
 			return kdlrs, err
 		}
@@ -162,7 +214,7 @@ func parseRawString(reader *bufio.Reader, key string) (KDLRawString, error) {
 	}
 
 	for {
-		r, _, err := reader.ReadRune()
+		r, err := readRune()
 		if err != nil {
 			return kdlrs, err
 		}
@@ -182,7 +234,7 @@ func parseRawString(reader *bufio.Reader, key string) (KDLRawString, error) {
 					return *NewKDLRawString(key, s.String()), nil
 				}
 
-				r, _, err := reader.ReadRune()
+				r, err := readRune()
 				if err != nil {
 					return kdlrs, err
 				}
@@ -200,18 +252,21 @@ func parseRawString(reader *bufio.Reader, key string) (KDLRawString, error) {
 	}
 }
 
-func parseNumber(reader *bufio.Reader, key string, start rune) (KDLNumber, error) {
+func parseNumber(key string, start rune) (KDLNumber, error) {
 	var kdlnum KDLNumber
 	var val strings.Builder
 	val.WriteRune(start)
 
 	for {
-		r, _, err := reader.ReadRune()
-		if err != nil && err.Error() != "EOF" {
+		r, err := peek()
+		if r != ';' {
+			discard(1)
+		}
+		if err != nil && err.Error() != EOF {
 			return kdlnum, err
 		}
 
-		if unicode.IsSpace(r) || (err != nil && err.Error() == "EOF") {
+		if r == ';' || unicode.IsSpace(r) || (err != nil && err.Error() == EOF) {
 			value, err := strconv.ParseFloat(val.String(), 64)
 			if err != nil {
 				return kdlnum, err
@@ -226,19 +281,19 @@ func parseNumber(reader *bufio.Reader, key string, start rune) (KDLNumber, error
 	}
 }
 
-func parseNull(reader *bufio.Reader, key string) (KDLNull, error) {
+func parseNull(key string) (KDLNull, error) {
 	var kdlnull KDLNull
 	charset := []rune{'u', 'l', 'l'}
 	i := 0
 
 	for {
-		r, _, err := reader.ReadRune()
+		r, err := readRune()
 		if err != nil {
 			return kdlnull, err
 		}
 
 		if r != charset[i] {
-			return kdlnull, errors.New("Invalid syntax")
+			return kdlnull, invalidSyntaxErr()
 		}
 		i++
 		if i == len(charset) {
@@ -249,7 +304,7 @@ func parseNull(reader *bufio.Reader, key string) (KDLNull, error) {
 	return *NewKDLNull(key), nil
 }
 
-func parseBool(reader *bufio.Reader, key string, start rune) (KDLBool, error) {
+func parseBool(key string, start rune) (KDLBool, error) {
 	var kdlbool KDLBool
 	var charset []rune
 	i := 0
@@ -259,17 +314,17 @@ func parseBool(reader *bufio.Reader, key string, start rune) (KDLBool, error) {
 	} else if start == 'f' {
 		charset = []rune{'a', 'l', 's', 'e'}
 	} else {
-		return kdlbool, errors.New("Invalid syntax")
+		return kdlbool, invalidSyntaxErr()
 	}
 
 	for {
-		r, _, err := reader.ReadRune()
+		r, err := readRune()
 		if err != nil {
 			return kdlbool, err
 		}
 
 		if r != charset[i] {
-			return kdlbool, errors.New("Invalid syntax")
+			return kdlbool, invalidSyntaxErr()
 		}
 		i++
 		if i == len(charset) {
@@ -286,13 +341,13 @@ func ConvertToDocument(objs []KDLObject) (KDLDocument, error) {
 	var doc KDLDocument
 
 	if len(objs) < 1 {
-		return doc, errors.New("Empty array")
+		return doc, emptyArrayErr()
 	}
 
 	key = objs[0].GetKey()
 	for _, obj := range objs {
 		if obj.GetKey() != key {
-			return doc, errors.New("Different key found in the array of KDLObject")
+			return doc, differentKeysErr()
 		}
 
 		vals = append(vals, obj.GetValue())

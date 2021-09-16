@@ -1,4 +1,4 @@
-package main
+package kdlgo
 
 import (
 	"errors"
@@ -17,6 +17,7 @@ const (
 	KDLDocumentType  = "kdl_document"
 	KDLNullType      = "kdl_null"
 	KDLDefaultType   = "kdl_default"
+	KDLObjectsType   = "kdl_objects"
 )
 
 type KDLValue struct {
@@ -25,6 +26,7 @@ type KDLValue struct {
 	String    string
 	RawString string
 	Document  []KDLValue
+	Objects   []KDLObject
 
 	Type KDLType
 }
@@ -56,6 +58,18 @@ func (kdlValue KDLValue) ToString() (string, error) {
 		return s.String(), nil
 	case KDLNullType:
 		return "null", nil
+	case KDLDefaultType:
+		return "", nil
+	case KDLObjectsType:
+		var s strings.Builder
+		for _, obj := range kdlValue.Objects {
+			objStr, err := KDLObjToString(obj)
+			if err != nil {
+				return "", err
+			}
+			s.WriteString(objStr + "; ")
+		}
+		return "{ " + s.String() + "}", nil
 	default:
 		return "", errors.New("Invalid KDLType")
 	}
@@ -71,7 +85,10 @@ func KDLObjToString(kdlObj KDLObject) (string, error) {
 	if err != nil {
 		return "", nil
 	}
-	return kdlObj.GetKey() + " {" + s + "}", nil
+	if len(s) > 0 {
+		s = " " + s
+	}
+	return kdlObj.GetKey() + s, nil
 }
 
 type KDLBool struct {
@@ -175,5 +192,39 @@ func (kdlNode KDLNull) GetKey() string {
 }
 
 func (kdlNode KDLNull) GetValue() KDLValue {
+	return kdlNode.value
+}
+
+type KDLDefault struct {
+	key   string
+	value KDLValue
+}
+
+func NewKDLDefault(key string) *KDLDefault {
+	return &KDLDefault{key: key, value: KDLValue{Type: KDLDefaultType}}
+}
+
+func (kdlNode KDLDefault) GetKey() string {
+	return kdlNode.key
+}
+
+func (kdlNode KDLDefault) GetValue() KDLValue {
+	return kdlNode.value
+}
+
+type KDLObjects struct {
+	key   string
+	value KDLValue
+}
+
+func NewKDLObjects(key string, objects []KDLObject) KDLObjects {
+	return KDLObjects{key: key, value: KDLValue{Objects: objects, Type: KDLObjectsType}}
+}
+
+func (kdlNode KDLObjects) GetKey() string {
+	return kdlNode.key
+}
+
+func (kdlNode KDLObjects) GetValue() KDLValue {
 	return kdlNode.value
 }
