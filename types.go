@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"math/big"
 	"strconv"
 	"strings"
@@ -17,6 +16,7 @@ const (
 	KDLRawStringType = "kdl_raw_string"
 	KDLDocumentType  = "kdl_document"
 	KDLNullType      = "kdl_null"
+	KDLDefaultType   = "kdl_default"
 )
 
 type KDLValue struct {
@@ -40,7 +40,7 @@ func (kdlValue KDLValue) ToString() (string, error) {
 	case KDLStringType:
 		return strconv.Quote(kdlValue.String), nil
 	case KDLRawStringType:
-		return kdlValue.RawString, nil
+		return "r\"" + kdlValue.RawString + "\"", nil
 	case KDLDocumentType:
 		var s strings.Builder
 		for i, v := range kdlValue.Document {
@@ -115,10 +115,7 @@ type KDLString struct {
 
 func NewKDLString(key string, value string) *KDLString {
 	value = strings.ReplaceAll(value, "\n", "\\n")
-	s, err := strconv.Unquote(`"` + value + `"`)
-	if err != nil {
-		fmt.Println(`"` + value + `"`)
-	}
+	s, _ := strconv.Unquote(`"` + value + `"`)
 	return &KDLString{key: key, value: KDLValue{String: s, Type: KDLStringType}}
 }
 

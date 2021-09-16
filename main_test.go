@@ -15,7 +15,7 @@ func TestParseFromFile(t *testing.T) {
 	}
 
 	expected := []string{
-		`firstkey {"first\n\ttab\nnewline\nval"}`,
+		`firstkey {"first\n\ttab\nnewline\nval" r"testing""}`,
 		`thirdkey {true null}`,
 		`secondkey {1.2E+01 "test" null false "testagain"}`,
 		`anotherkey {"true" 1.23543E+05 null true}`,
@@ -29,7 +29,7 @@ func TestParseFromFile(t *testing.T) {
 			return
 		}
 		if s != expected[i] {
-			t.Error("Item number " + strconv.Itoa(i+1) + " is incorrectly parsed.")
+			t.Error("Item number "+strconv.Itoa(i+1)+" is incorrectly parsed.\n", "Expected: '"+expected[i]+"' but got '"+s+"' instead")
 		}
 	}
 }

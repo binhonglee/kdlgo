@@ -1,6 +1,6 @@
 firstkey "first
 	tab\nnewline
-val"
+val" r###"testing""###
 thirdkey true null
 secondkey 12 "test" null false "testagain"
 anotherkey "true" 123543 null true

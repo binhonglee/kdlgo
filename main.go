@@ -67,7 +67,6 @@ func parseObject(reader *bufio.Reader) (KDLObject, error) {
 			return nil, err
 		}
 	}
-	// return NewKDLNull(key), nil
 }
 
 func parseKey(reader *bufio.Reader) (string, error) {
@@ -115,6 +114,8 @@ func parseValue(reader *bufio.Reader, key string, r rune) (KDLObject, error) {
 		fallthrough
 	case 'f':
 		return parseBool(reader, key, r)
+	case 'r':
+		return parseRawString(reader, key)
 	}
 
 	return nil, errors.New("Eh")
@@ -135,6 +136,67 @@ func parseString(reader *bufio.Reader, key string) (KDLString, error) {
 		}
 
 		s.WriteRune(r)
+	}
+}
+
+func parseRawString(reader *bufio.Reader, key string) (KDLRawString, error) {
+	var kdlrs KDLRawString
+	var s strings.Builder
+
+	count := 0
+
+	for {
+		r, _, err := reader.ReadRune()
+		if err != nil {
+			return kdlrs, err
+		}
+
+		if r == '#' {
+			count++
+			continue
+		}
+
+		if r == '"' {
+			break
+		}
+	}
+
+	for {
+		r, _, err := reader.ReadRune()
+		if err != nil {
+			return kdlrs, err
+		}
+
+		for {
+			if r != '"' {
+				s.WriteRune(r)
+				break
+			}
+
+			var temp strings.Builder
+			tempCount := 0
+			temp.WriteRune(r)
+
+			for {
+				if tempCount == count {
+					return *NewKDLRawString(key, s.String()), nil
+				}
+
+				r, _, err := reader.ReadRune()
+				if err != nil {
+					return kdlrs, err
+				}
+
+				if r != '#' {
+					break
+				}
+
+				tempCount++
+				temp.WriteRune(r)
+			}
+
+			s.WriteString(temp.String())
+		}
 	}
 }
 
@@ -218,9 +280,21 @@ func parseBool(reader *bufio.Reader, key string, start rune) (KDLBool, error) {
 	return *NewKDLBool(key, start == 't'), nil
 }
 
-func ConvertToDocument(key string, objs []KDLObject) (KDLDocument, error) {
+func ConvertToDocument(objs []KDLObject) (KDLDocument, error) {
+	var key string
 	var vals []KDLValue
+	var doc KDLDocument
+
+	if len(objs) < 1 {
+		return doc, errors.New("Empty array")
+	}
+
+	key = objs[0].GetKey()
 	for _, obj := range objs {
+		if obj.GetKey() != key {
+			return doc, errors.New("Different key found in the array of KDLObject")
+		}
+
 		vals = append(vals, obj.GetValue())
 	}
 	return *NewKDLDocument(key, vals), nil
