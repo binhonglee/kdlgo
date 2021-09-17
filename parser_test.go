@@ -11,7 +11,7 @@ func TestParseFromFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-		`firstkey "first\n\ttab\nnewline\nval" r"testing""`,
+		`firstkey "first\n\ttab\nnewline\"\nval" r"testing""`,
 		`numbers 543 234 85720394`,
 		`thirdkey true null`,
 		`secondkey 12 "test" null false "testagain"`,
@@ -21,6 +21,10 @@ func TestParseFromFile(t *testing.T) {
 		`testcomment`,
 		`objects { node1 12; node2 "string"; node3 null; }`,
 		`multiline-node "random"`,
+		`title "Some title"`,
+		`smile "😁"`,
+		`foo123~!@#$%^&*.:'|/?+ "weeee"`,
+		`test "value"`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

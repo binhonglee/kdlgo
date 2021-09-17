@@ -19,6 +19,11 @@ const (
 	KDLObjectsType   = "kdl_objects"
 )
 
+type KDLNode struct {
+	node         string
+	declaredType string
+}
+
 type KDLValue struct {
 	Bool      bool
 	Number    big.Float
@@ -27,7 +32,8 @@ type KDLValue struct {
 	Document  []KDLValue
 	Objects   []KDLObject
 
-	Type KDLType
+	Type         KDLType
+	declaredType string
 }
 
 func (kdlValue KDLValue) RecreateKDL() (string, error) {
@@ -108,8 +114,8 @@ type KDLBool struct {
 	value KDLValue
 }
 
-func NewKDLBool(key string, value bool) *KDLBool {
-	return &KDLBool{key: key, value: KDLValue{Bool: value, Type: KDLBoolType}}
+func NewKDLBool(key string, value bool) KDLBool {
+	return KDLBool{key: key, value: KDLValue{Bool: value, Type: KDLBoolType}}
 }
 
 func (kdlNode KDLBool) GetKey() string {
@@ -125,8 +131,8 @@ type KDLNumber struct {
 	value KDLValue
 }
 
-func NewKDLNumber(key string, value float64) *KDLNumber {
-	return &KDLNumber{key: key, value: KDLValue{Number: *big.NewFloat(value), Type: KDLNumberType}}
+func NewKDLNumber(key string, value float64) KDLNumber {
+	return KDLNumber{key: key, value: KDLValue{Number: *big.NewFloat(value), Type: KDLNumberType}}
 }
 
 func (kdlNode KDLNumber) GetKey() string {
@@ -142,10 +148,10 @@ type KDLString struct {
 	value KDLValue
 }
 
-func NewKDLString(key string, value string) *KDLString {
+func NewKDLString(key string, value string) KDLString {
 	value = strings.ReplaceAll(value, "\n", "\\n")
 	s, _ := strconv.Unquote(`"` + value + `"`)
-	return &KDLString{key: key, value: KDLValue{String: s, Type: KDLStringType}}
+	return KDLString{key: key, value: KDLValue{String: s, Type: KDLStringType}}
 }
 
 func (kdlNode KDLString) GetKey() string {
@@ -161,8 +167,8 @@ type KDLRawString struct {
 	value KDLValue
 }
 
-func NewKDLRawString(key string, value string) *KDLRawString {
-	return &KDLRawString{key: key, value: KDLValue{RawString: value, Type: KDLRawStringType}}
+func NewKDLRawString(key string, value string) KDLRawString {
+	return KDLRawString{key: key, value: KDLValue{RawString: value, Type: KDLRawStringType}}
 }
 
 func (kdlNode KDLRawString) GetKey() string {
@@ -178,8 +184,8 @@ type KDLDocument struct {
 	value KDLValue
 }
 
-func NewKDLDocument(key string, value []KDLValue) *KDLDocument {
-	return &KDLDocument{key: key, value: KDLValue{Document: value, Type: KDLDocumentType}}
+func NewKDLDocument(key string, value []KDLValue) KDLDocument {
+	return KDLDocument{key: key, value: KDLValue{Document: value, Type: KDLDocumentType}}
 }
 
 func (kdlNode KDLDocument) GetKey() string {
@@ -195,8 +201,8 @@ type KDLNull struct {
 	value KDLValue
 }
 
-func NewKDLNull(key string) *KDLNull {
-	return &KDLNull{key: key, value: KDLValue{Type: KDLNullType}}
+func NewKDLNull(key string) KDLNull {
+	return KDLNull{key: key, value: KDLValue{Type: KDLNullType}}
 }
 
 func (kdlNode KDLNull) GetKey() string {
@@ -212,8 +218,8 @@ type KDLDefault struct {
 	value KDLValue
 }
 
-func NewKDLDefault(key string) *KDLDefault {
-	return &KDLDefault{key: key, value: KDLValue{Type: KDLDefaultType}}
+func NewKDLDefault(key string) KDLDefault {
+	return KDLDefault{key: key, value: KDLValue{Type: KDLDefaultType}}
 }
 
 func (kdlNode KDLDefault) GetKey() string {

@@ -2,14 +2,28 @@ package kdlgo
 
 import (
 	"bufio"
-	"math/big"
 	"os"
 	"strconv"
 	"strings"
 	"unicode"
 )
 
-const EOF = "EOF"
+const (
+	eof = "EOF"
+
+	asterisk  = '*'
+	backslash = '\\'
+	dash      = '-'
+	dquote    = '"'
+	equals    = '='
+	newline   = '\n'
+	pound     = '#'
+	semicolon = ';'
+	slash     = '/'
+
+	openBracket  = '{'
+	closeBracket = '}'
+)
 
 func ParseFile(fullfilepath string) (KDLObjects, error) {
 	var t KDLObjects
@@ -22,48 +36,68 @@ func ParseFile(fullfilepath string) (KDLObjects, error) {
 }
 
 func ParseReader(reader *bufio.Reader) (KDLObjects, error) {
-	setReader(reader)
-	return parseObjects(false, "")
+	r := newKDLReader(reader)
+	return parseObjects(r, false, "")
 }
 
-func parseObjects(hasOpen bool, key string) (KDLObjects, error) {
+func parseObjects(kdlr *kdlReader, hasOpen bool, key string) (KDLObjects, error) {
 	var t KDLObjects
 	var objects []KDLObject
 	for {
-		obj, err := parseObject()
+		obj, err := parseObject(kdlr)
 		if err == nil {
-			objects = append(objects, obj)
-		} else if err.Error() == EOF || err.Error() == kdlEndOfObj {
+			if obj != nil {
+				objects = append(objects, obj)
+			}
+		} else if err.Error() == eof || err.Error() == kdlEndOfObj {
 			if obj != nil {
 				objects = append(objects, obj)
 			}
 			return NewKDLObjects(key, objects), nil
 		} else {
-			return t, wrapError(err)
+			return t, wrapError(kdlr, err)
 		}
 	}
 }
 
-func parseObject() (KDLObject, error) {
+func parseObject(kdlr *kdlReader) (KDLObject, error) {
 	for {
-		r, err := peek()
+		err := blockComment(kdlr)
 		if err != nil {
 			return nil, err
 		}
 
-		if r == '}' {
-			discard(1)
+		r, err := kdlr.peek()
+		if err != nil {
+			return nil, err
+		}
+
+		if r == closeBracket {
+			kdlr.discard(1)
 			return nil, endOfObjErr()
 		}
 
-		if !unicode.IsSpace(r) {
-			break
+		skipLine, err := lineComment(kdlr)
+		if err != nil {
+			if err.Error() == eof && skipLine {
+				return nil, nil
+			}
+			return nil, err
 		}
 
-		discard(1)
+		if skipLine {
+			continue
+		}
+
+		if unicode.IsSpace(r) {
+			kdlr.discard(1)
+			continue
+		}
+
+		break
 	}
 
-	key, err := parseKey()
+	key, err := parseKey(kdlr)
 
 	if err != nil {
 		if err.Error() == kdlKeyOnly {
@@ -74,21 +108,26 @@ func parseObject() (KDLObject, error) {
 
 	var objects []KDLObject
 	for {
-		r, err := readRune()
-		if err != nil && err.Error() != EOF {
+		err = blockComment(kdlr)
+		if err != nil && err.Error() != eof {
 			return nil, err
 		}
 
-		if r == '\\' {
-			peek, err := peek()
-			if err == nil && peek == '\n' {
-				discard(1)
+		r, err := kdlr.readRune()
+		if err != nil && err.Error() != eof {
+			return nil, err
+		}
+
+		if r == backslash {
+			peek, err := kdlr.peek()
+			if err == nil && peek == newline {
+				kdlr.discard(1)
 				continue
 			}
 		}
 
-		if r == '\n' || r == ';' ||
-			(err != nil && err.Error() == EOF) {
+		if r == newline || r == semicolon ||
+			(err != nil && err.Error() == eof) {
 			if len(objects) == 0 {
 				return NewKDLDefault(key), nil
 			} else if len(objects) == 1 {
@@ -100,18 +139,31 @@ func parseObject() (KDLObject, error) {
 			continue
 		}
 
-		skipNext := false
-		peek, _ := peek()
-		if r == '/' && peek == '-' {
-			discard(1)
-			r, err = readRune()
+		kdlr.unreadRune()
+		skipNext, _ := kdlr.isNext([]byte{slash, dash})
+		if skipNext {
+			r, err = kdlr.peek()
 			if err != nil {
+				if err.Error() == eof {
+					return ConvertToDocument(objects)
+				}
 				return nil, err
 			}
-			skipNext = true
 		}
 
-		obj, err := parseValue(key, r)
+		skipLine, err := lineComment(kdlr)
+		if err != nil {
+			if err.Error() == eof && skipLine {
+				return ConvertToDocument(objects)
+			}
+			return nil, err
+		}
+
+		if skipLine {
+			continue
+		}
+
+		obj, err := parseValue(kdlr, key, r)
 		if !skipNext {
 			objects = append(objects, obj)
 		}
@@ -121,11 +173,11 @@ func parseObject() (KDLObject, error) {
 	}
 }
 
-func parseKey() (string, error) {
+func parseKey(kdlr *kdlReader) (string, error) {
 	var key strings.Builder
 
 	for {
-		r, err := readRune()
+		r, err := kdlr.readRune()
 		if err != nil {
 			return key.String(), err
 		}
@@ -133,7 +185,7 @@ func parseKey() (string, error) {
 		if unicode.IsSpace(r) {
 			if len(key.String()) < 1 {
 				continue
-			} else if r == '\n' {
+			} else if r == newline {
 				return key.String(), keyOnlyErr()
 			} else {
 				return key.String(), nil
@@ -142,7 +194,7 @@ func parseKey() (string, error) {
 
 		invalid :=
 			(len(key.String()) < 1 && unicode.IsNumber(r)) ||
-				unicode.IsSpace(r) || r == '=' || r == '"'
+				unicode.IsSpace(r) || r == equals || r == dquote
 		if invalid {
 			return key.String(), invalidKeyCharErr()
 		}
@@ -150,77 +202,95 @@ func parseKey() (string, error) {
 	}
 }
 
-func parseValue(key string, r rune) (KDLObject, error) {
+func parseValue(kdlr *kdlReader, key string, r rune) (KDLObject, error) {
 	if unicode.IsNumber(r) {
-		return parseNumber(key, r)
+		kdlr.discard(1)
+		return parseNumber(kdlr, key, r)
 	}
 
 	switch r {
-	case '"':
-		return parseString(key)
+	case dquote:
+		kdlr.discard(1)
+		return parseString(kdlr, key)
 	case 'n':
-		return parseNull(key)
+		return parseNull(kdlr, key)
 	case 't':
 		fallthrough
 	case 'f':
-		return parseBool(key, r)
+		return parseBool(kdlr, key, r)
 	case 'r':
-		return parseRawString(key)
-	case '{':
-		return parseObjects(true, key)
+		kdlr.discard(1)
+		return parseRawString(kdlr, key)
+	case openBracket:
+		kdlr.discard(1)
+		return parseObjects(kdlr, true, key)
 	}
 
 	return nil, invalidSyntaxErr()
 }
 
-func parseString(key string) (KDLString, error) {
+func parseString(kdlr *kdlReader, key string) (KDLString, error) {
 	var kdls KDLString
 	var s strings.Builder
 
 	for {
-		r, err := readRune()
+		r, err := kdlr.readRune()
 		if err != nil {
 			return kdls, err
 		}
 
-		if r == '"' {
-			return *NewKDLString(key, s.String()), nil
+		if r == backslash {
+			var b byte = '"'
+			next, err := kdlr.isNext([]byte{b})
+			if err != nil {
+				return kdls, err
+			}
+
+			if next {
+				s.WriteRune(r)
+				s.WriteByte(b)
+				continue
+			}
+		}
+
+		if r == dquote {
+			return NewKDLString(key, s.String()), nil
 		}
 
 		s.WriteRune(r)
 	}
 }
 
-func parseRawString(key string) (KDLRawString, error) {
+func parseRawString(kdlr *kdlReader, key string) (KDLRawString, error) {
 	var kdlrs KDLRawString
 	var s strings.Builder
 
 	count := 0
 
 	for {
-		r, err := readRune()
+		r, err := kdlr.readRune()
 		if err != nil {
 			return kdlrs, err
 		}
 
-		if r == '#' {
+		if r == pound {
 			count++
 			continue
 		}
 
-		if r == '"' {
+		if r == dquote {
 			break
 		}
 	}
 
 	for {
-		r, err := readRune()
+		r, err := kdlr.readRune()
 		if err != nil {
 			return kdlrs, err
 		}
 
 		for {
-			if r != '"' {
+			if r != dquote {
 				s.WriteRune(r)
 				break
 			}
@@ -231,15 +301,15 @@ func parseRawString(key string) (KDLRawString, error) {
 
 			for {
 				if tempCount == count {
-					return *NewKDLRawString(key, s.String()), nil
+					return NewKDLRawString(key, s.String()), nil
 				}
 
-				r, err := readRune()
+				r, err := kdlr.readRune()
 				if err != nil {
 					return kdlrs, err
 				}
 
-				if r != '#' {
+				if r != pound {
 					break
 				}
 
@@ -252,87 +322,128 @@ func parseRawString(key string) (KDLRawString, error) {
 	}
 }
 
-func parseNumber(key string, start rune) (KDLNumber, error) {
+func parseNumber(kdlr *kdlReader, key string, start rune) (KDLNumber, error) {
 	var kdlnum KDLNumber
 	var val strings.Builder
 	val.WriteRune(start)
 
 	for {
-		r, err := peek()
-		if r != ';' && r != '\n' {
-			discard(1)
-		}
-		if err != nil && err.Error() != EOF {
+		r, err := kdlr.peek()
+		if err != nil && err.Error() != eof {
 			return kdlnum, err
 		}
+		if r != semicolon && r != newline && r != slash {
+			kdlr.discard(1)
+		}
 
-		if r == ';' || unicode.IsSpace(r) || (err != nil && err.Error() == EOF) {
+		if r == semicolon || unicode.IsSpace(r) ||
+			r == slash || (err != nil && err.Error() == eof) {
 			value, err := strconv.ParseFloat(val.String(), 64)
 			if err != nil {
 				return kdlnum, err
 			}
-			kdlnum.key = key
-			kdlnum.value.Number = *big.NewFloat(value)
-			kdlnum.value.Type = KDLNumberType
-			return kdlnum, nil
+			return NewKDLNumber(key, value), nil
 		}
 
 		val.WriteRune(r)
 	}
 }
 
-func parseNull(key string) (KDLNull, error) {
+func parseNull(kdlr *kdlReader, key string) (KDLNull, error) {
 	var kdlnull KDLNull
-	charset := []rune{'u', 'l', 'l'}
-	i := 0
-
-	for {
-		r, err := readRune()
-		if err != nil {
-			return kdlnull, err
-		}
-
-		if r != charset[i] {
-			return kdlnull, invalidSyntaxErr()
-		}
-		i++
-		if i == len(charset) {
-			break
-		}
+	charset := []byte{'n', 'u', 'l', 'l'}
+	next, err := kdlr.isNext(charset)
+	if err != nil {
+		return kdlnull, err
 	}
 
-	return *NewKDLNull(key), nil
+	if next {
+		return NewKDLNull(key), nil
+	}
+
+	return kdlnull, invalidSyntaxErr()
 }
 
-func parseBool(key string, start rune) (KDLBool, error) {
+func parseBool(kdlr *kdlReader, key string, start rune) (KDLBool, error) {
 	var kdlbool KDLBool
-	var charset []rune
-	i := 0
+	var charset []byte
 
 	if start == 't' {
-		charset = []rune{'r', 'u', 'e'}
+		charset = []byte{'t', 'r', 'u', 'e'}
 	} else if start == 'f' {
-		charset = []rune{'a', 'l', 's', 'e'}
+		charset = []byte{'f', 'a', 'l', 's', 'e'}
 	} else {
 		return kdlbool, invalidSyntaxErr()
 	}
 
-	for {
-		r, err := readRune()
-		if err != nil {
-			return kdlbool, err
-		}
-
-		if r != charset[i] {
-			return kdlbool, invalidSyntaxErr()
-		}
-		i++
-		if i == len(charset) {
-			break
-		}
+	next, err := kdlr.isNext(charset)
+	if err != nil {
+		return kdlbool, err
 	}
 
-	return *NewKDLBool(key, start == 't'), nil
+	if next {
+		return NewKDLBool(key, start == 't'), nil
+	}
+	return kdlbool, invalidSyntaxErr()
+}
+
+func lineComment(kdlr *kdlReader) (bool, error) {
+	skipLine, _ := kdlr.isNext([]byte{slash, slash})
+	if skipLine {
+		err := kdlr.discardLine()
+		if err != nil && err.Error() != eof {
+			return false, err
+		}
+		return true, err
+	}
+	return false, nil
+}
+
+func blockComment(kdlr *kdlReader) error {
+	count := 0
+	open := []byte{slash, asterisk}
+	close := []byte{asterisk, slash}
+
+	for {
+		isBlock, err := kdlr.isNext(open)
+		if err != nil {
+			return err
+		}
+
+		if isBlock {
+			count++
+		}
+
+		break
+	}
+
+	for {
+		if count == 0 {
+			return nil
+		}
+
+		isOpen, err := kdlr.isNext(open)
+		if err != nil {
+			return err
+		}
+
+		if isOpen {
+			count++
+			continue
+		}
+
+		isClose, err := kdlr.isNext(close)
+		if err != nil {
+			return err
+		}
+
+		if isClose {
+			count--
+			continue
+		}
+
+		kdlr.discard(1)
+	}
 }
 
 func ConvertToDocument(objs []KDLObject) (KDLDocument, error) {
@@ -352,5 +463,5 @@ func ConvertToDocument(objs []KDLObject) (KDLDocument, error) {
 
 		vals = append(vals, obj.GetValue())
 	}
-	return *NewKDLDocument(key, vals), nil
+	return NewKDLDocument(key, vals), nil
 }

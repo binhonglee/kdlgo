@@ -2,7 +2,10 @@ package kdlgo
 
 import (
 	"errors"
+	"fmt"
+	"runtime"
 	"strconv"
+	"strings"
 )
 
 type KDLErrorType string
@@ -19,8 +22,11 @@ const (
 	kdlEndOfObj = "End of KDLObject"
 )
 
-func wrapError(err error) error {
-	return errors.New(err.Error() + "\nOn line " + strconv.Itoa(line) + " column " + strconv.Itoa(pos))
+func wrapError(kdlr *kdlReader, err error) error {
+	return errors.New(
+		err.Error() + "\nOn line " + strconv.Itoa(kdlr.line) +
+			" column " + strconv.Itoa(kdlr.pos),
+	)
 }
 
 func differentKeysErr() error {
@@ -49,4 +55,15 @@ func keyOnlyErr() error {
 
 func endOfObjErr() error {
 	return errors.New(kdlEndOfObj)
+}
+
+func DebugCaller(level int) {
+	_, file, no, ok := runtime.Caller(level)
+	if ok {
+		paths := strings.Split(file, "/")
+		if paths[len(paths)-1] != "asm_amd64.s" {
+			fmt.Println("(" + file + ":" + strconv.Itoa(no) + ")")
+			DebugCaller(level + 2)
+		}
+	}
 }
