@@ -47,7 +47,7 @@ func (kdlValue KDLValue) RecreateKDL() (string, error) {
 	case KDLStringType:
 		return strconv.Quote(kdlValue.String), nil
 	case KDLRawStringType:
-		return "r\"" + kdlValue.RawString + "\"", nil
+		return strconv.Quote(kdlValue.RawString), nil
 	case KDLDocumentType:
 		var s strings.Builder
 		for i, v := range kdlValue.Document {
@@ -106,7 +106,11 @@ func RecreateKDLObj(kdlObj KDLObject) (string, error) {
 	if len(s) > 0 {
 		s = " " + s
 	}
-	return kdlObj.GetKey() + s, nil
+	key := kdlObj.GetKey()
+	if strings.Contains(key, " ") {
+		key = strconv.Quote(key)
+	}
+	return key + s, nil
 }
 
 type KDLBool struct {

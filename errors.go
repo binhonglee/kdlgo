@@ -2,10 +2,7 @@ package kdlgo
 
 import (
 	"errors"
-	"fmt"
-	"runtime"
 	"strconv"
-	"strings"
 )
 
 type KDLErrorType string
@@ -16,6 +13,7 @@ const (
 	KDLInvalidKeyChar = "Invalid character for key"
 	KDLInvalidSyntax  = "Invalid syntax"
 	KDLInvalidType    = "Invalid KDLType"
+	KDLUnexpectedEOF  = "Unexpected end of file"
 
 	// These should be caught and handled internally
 	kdlKeyOnly  = "Key only"
@@ -57,13 +55,6 @@ func endOfObjErr() error {
 	return errors.New(kdlEndOfObj)
 }
 
-func DebugCaller(level int) {
-	_, file, no, ok := runtime.Caller(level)
-	if ok {
-		paths := strings.Split(file, "/")
-		if paths[len(paths)-1] != "asm_amd64.s" {
-			fmt.Println("(" + file + ":" + strconv.Itoa(no) + ")")
-			DebugCaller(level + 2)
-		}
-	}
+func unexpectedEOFErr() error {
+	return errors.New(KDLUnexpectedEOF)
 }

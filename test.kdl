@@ -20,7 +20,8 @@ multiline-node \
 // Nodes can be separated into multiple lines
 title \
   "Some title"
-
+"quoted node" "quoted value"
+"quoted node for numbers" 21 43 465 "string"
 
 // Files must be utf8 encoded!
 smile "😁" // more text here commented out

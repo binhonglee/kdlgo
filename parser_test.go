@@ -11,7 +11,7 @@ func TestParseFromFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-		`firstkey "first\n\ttab\nnewline\"\nval" r"testing""`,
+		`firstkey "first\n\ttab\nnewline\"\nval" "testing\""`,
 		`numbers 543 234 85720394`,
 		`thirdkey true null`,
 		`secondkey 12 "test" null false "testagain"`,
@@ -22,6 +22,8 @@ func TestParseFromFile(t *testing.T) {
 		`objects { node1 12; node2 "string"; node3 null; }`,
 		`multiline-node "random"`,
 		`title "Some title"`,
+		`"quoted node" "quoted value"`,
+		`"quoted node for numbers" 21 43 465 "string"`,
 		`smile "😁"`,
 		`foo123~!@#$%^&*.:'|/?+ "weeee"`,
 		`test "value"`,

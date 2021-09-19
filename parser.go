@@ -35,6 +35,10 @@ func ParseFile(fullfilepath string) (KDLObjects, error) {
 	return ParseReader(r)
 }
 
+func ParseString(toParse string) (KDLObjects, error) {
+	return ParseReader(bufio.NewReader(strings.NewReader(toParse)))
+}
+
 func ParseReader(reader *bufio.Reader) (KDLObjects, error) {
 	r := newKDLReader(reader)
 	return parseObjects(r, false, "")
@@ -175,30 +179,57 @@ func parseObject(kdlr *kdlReader) (KDLObject, error) {
 
 func parseKey(kdlr *kdlReader) (string, error) {
 	var key strings.Builder
+	isQuoted := false
+	prev := newline
 
 	for {
 		r, err := kdlr.readRune()
 		if err != nil {
+			if err.Error() == eof {
+				err = unexpectedEOFErr()
+			}
 			return key.String(), err
 		}
 
-		if unicode.IsSpace(r) {
-			if len(key.String()) < 1 {
+		if (!isQuoted && unicode.IsSpace(r)) || r == newline ||
+			(unicode.IsSpace(r) && prev == dquote) {
+			if key.Len() < 1 {
 				continue
 			} else if r == newline {
-				return key.String(), keyOnlyErr()
+				return checkQuotedString(key), keyOnlyErr()
 			} else {
-				return key.String(), nil
+				return checkQuotedString(key), nil
 			}
 		}
 
 		invalid :=
-			(len(key.String()) < 1 && unicode.IsNumber(r)) ||
-				unicode.IsSpace(r) || r == equals || r == dquote
+			(key.Len() < 1 && unicode.IsNumber(r)) ||
+				(!isQuoted && unicode.IsSpace(r)) || r == equals
 		if invalid {
 			return key.String(), invalidKeyCharErr()
 		}
+
+		if key.Len() < 1 {
+			isQuoted = r == '"'
+		}
+		if prev == backslash && r == backslash {
+			prev = newline
+		} else if prev == backslash && r == dquote {
+			prev = newline
+		} else {
+			prev = r
+		}
 		key.WriteRune(r)
+	}
+}
+
+func checkQuotedString(s strings.Builder) string {
+	ss := s.String()
+	unquoted, err := strconv.Unquote(ss)
+	if err != nil {
+		return ss
+	} else {
+		return unquoted
 	}
 }
 
@@ -231,19 +262,27 @@ func parseValue(kdlr *kdlReader, key string, r rune) (KDLObject, error) {
 
 func parseString(kdlr *kdlReader, key string) (KDLString, error) {
 	var kdls KDLString
+	s, err := parseQuotedString(kdlr)
+	if err != nil {
+		return kdls, err
+	}
+	return NewKDLString(key, s), nil
+}
+
+func parseQuotedString(kdlr *kdlReader) (string, error) {
 	var s strings.Builder
 
 	for {
 		r, err := kdlr.readRune()
 		if err != nil {
-			return kdls, err
+			return s.String(), err
 		}
 
 		if r == backslash {
 			var b byte = '"'
 			next, err := kdlr.isNext([]byte{b})
 			if err != nil {
-				return kdls, err
+				return s.String(), err
 			}
 
 			if next {
@@ -254,7 +293,7 @@ func parseString(kdlr *kdlReader, key string) (KDLString, error) {
 		}
 
 		if r == dquote {
-			return NewKDLString(key, s.String()), nil
+			return s.String(), nil
 		}
 
 		s.WriteRune(r)
