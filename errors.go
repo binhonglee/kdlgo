@@ -16,8 +16,9 @@ const (
 	KDLUnexpectedEOF  = "Unexpected end of file"
 
 	// These should be caught and handled internally
-	kdlKeyOnly  = "Key only"
-	kdlEndOfObj = "End of KDLObject"
+	kdlKeyOnly     = "Key only"
+	kdlEndOfObj    = "End of KDLObject"
+	kdlNothingLeft = "Nothing else left to parse"
 )
 
 func wrapError(kdlr *kdlReader, err error) error {
@@ -53,6 +54,10 @@ func keyOnlyErr() error {
 
 func endOfObjErr() error {
 	return errors.New(kdlEndOfObj)
+}
+
+func nothingLeftErr() error {
+	return errors.New(kdlNothingLeft)
 }
 
 func unexpectedEOFErr() error {

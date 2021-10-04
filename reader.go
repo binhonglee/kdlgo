@@ -6,9 +6,10 @@ import (
 )
 
 type kdlReader struct {
-	line   int
-	pos    int
-	reader *bufio.Reader
+	line    int
+	pos     int
+	current rune
+	reader  *bufio.Reader
 }
 
 func newKDLReader(r *bufio.Reader) *kdlReader {
@@ -23,8 +24,13 @@ func (kdlr *kdlReader) readRune() (rune, error) {
 	} else {
 		kdlr.pos++
 	}
+	kdlr.current = r
 
 	return r, err
+}
+
+func (kdlr *kdlReader) lastRead() rune {
+	return kdlr.current
 }
 
 func (kdlr *kdlReader) discardLine() error {

@@ -107,7 +107,7 @@ func RecreateKDLObj(kdlObj KDLObject) (string, error) {
 		s = " " + s
 	}
 	key := kdlObj.GetKey()
-	if strings.Contains(key, " ") {
+	if strings.Contains(key, " ") || strconv.Quote(key) != "\""+key+"\"" {
 		key = strconv.Quote(key)
 	}
 	return key + s, nil

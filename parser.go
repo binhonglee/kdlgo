@@ -21,8 +21,10 @@ const (
 	semicolon = ';'
 	slash     = '/'
 
-	openBracket  = '{'
-	closeBracket = '}'
+	openBracket      = '{'
+	closeBracket     = '}'
+	openParenthesis  = '('
+	closeParenthesis = ')'
 )
 
 func ParseFile(fullfilepath string) (KDLObjects, error) {
@@ -101,6 +103,11 @@ func parseObject(kdlr *kdlReader) (KDLObject, error) {
 		break
 	}
 
+	skipNext, _ := kdlr.isNext([]byte{slash, dash})
+	if skipNext {
+		parseKey(kdlr)
+	}
+
 	key, err := parseKey(kdlr)
 
 	if err != nil {
@@ -167,7 +174,7 @@ func parseObject(kdlr *kdlReader) (KDLObject, error) {
 			continue
 		}
 
-		obj, err := parseValue(kdlr, key, r)
+		obj, err := parseVal(kdlr, key, r)
 		if !skipNext {
 			objects = append(objects, obj)
 		}
@@ -192,7 +199,7 @@ func parseKey(kdlr *kdlReader) (string, error) {
 		}
 
 		if (!isQuoted && unicode.IsSpace(r)) || r == newline ||
-			(unicode.IsSpace(r) && prev == dquote) {
+			((unicode.IsSpace(r) || r == equals) && prev == dquote) {
 			if key.Len() < 1 {
 				continue
 			} else if r == newline {
@@ -210,7 +217,7 @@ func parseKey(kdlr *kdlReader) (string, error) {
 		}
 
 		if key.Len() < 1 {
-			isQuoted = r == '"'
+			isQuoted = r == dquote
 		}
 		if prev == backslash && r == backslash {
 			prev = newline
@@ -233,6 +240,36 @@ func checkQuotedString(s strings.Builder) string {
 	}
 }
 
+func parseVal(kdlr *kdlReader, key string, r rune) (KDLObject, error) {
+	value, err := parseValue(kdlr, key, r)
+	if err == nil {
+		return value, nil
+	}
+
+	node, err := parseKey(kdlr)
+	if err != nil && err.Error() != KDLInvalidKeyChar {
+		if err.Error() == kdlKeyOnly {
+			return NewKDLDefault(node), nil
+		}
+		return nil, err
+	}
+
+	if kdlr.lastRead() != equals {
+		return NewKDLDefault(node), nil
+	}
+	r, err = kdlr.peek()
+	if err != nil {
+		return nil, err
+	}
+
+	obj, err := parseValue(kdlr, node, r)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewKDLObjects(key, []KDLObject{obj}), nil
+}
+
 func parseValue(kdlr *kdlReader, key string, r rune) (KDLObject, error) {
 	if unicode.IsNumber(r) {
 		kdlr.discard(1)
@@ -241,7 +278,6 @@ func parseValue(kdlr *kdlReader, key string, r rune) (KDLObject, error) {
 
 	switch r {
 	case dquote:
-		kdlr.discard(1)
 		return parseString(kdlr, key)
 	case 'n':
 		return parseNull(kdlr, key)
@@ -270,47 +306,66 @@ func parseString(kdlr *kdlReader, key string) (KDLString, error) {
 }
 
 func parseQuotedString(kdlr *kdlReader) (string, error) {
-	var s strings.Builder
+	count := 2
 
 	for {
-		r, err := kdlr.readRune()
+		bytes, err := kdlr.peekX(count)
 		if err != nil {
-			return s.String(), err
+			kdlr.discard(count)
+			return string(bytes[1:]), err
 		}
+		r := rune(bytes[len(bytes)-1])
 
 		if r == backslash {
-			var b byte = '"'
-			next, err := kdlr.isNext([]byte{b})
+			bs, err := kdlr.peekX(count + 1)
 			if err != nil {
-				return s.String(), err
+				kdlr.discard(count)
+				return string(bytes[1:]), err
 			}
+			next := bs[len(bs)-1] == byte(dquote)
 
 			if next {
-				s.WriteRune(r)
-				s.WriteByte(b)
+				count += 2
 				continue
 			}
 		}
 
 		if r == dquote {
-			return s.String(), nil
+			toRet := string(bytes[1 : len(bytes)-1])
+			temp, err := kdlr.peekX(count + 1)
+			if err != nil {
+				if err.Error() != eof {
+
+					return toRet, err
+				}
+				kdlr.discard(count)
+				return toRet, nil
+			}
+
+			r = rune(temp[len(temp)-1])
+			if !(unicode.IsSpace(r) || r == semicolon) {
+				return toRet, invalidSyntaxErr()
+			}
+			kdlr.discard(count)
+			return toRet, nil
 		}
 
-		s.WriteRune(r)
+		count++
 	}
 }
 
 func parseRawString(kdlr *kdlReader, key string) (KDLRawString, error) {
 	var kdlrs KDLRawString
-	var s strings.Builder
-
 	count := 0
+	length := 0
 
 	for {
-		r, err := kdlr.readRune()
+		length++
+		bytes, err := kdlr.peekX(length)
 		if err != nil {
 			return kdlrs, err
 		}
+		r := rune(bytes[len(bytes)-1])
 
 		if r == pound {
 			count++
@@ -320,44 +375,41 @@ func parseRawString(kdlr *kdlReader, key string) (KDLRawString, error) {
 		if r == dquote {
 			break
 		}
+
+		return kdlrs, invalidSyntaxErr()
 	}
 
+	start := length
+	length++
+	poundCount := 0
+	dqStart := false
+
 	for {
-		r, err := kdlr.readRune()
+		bytes, err := kdlr.peekX(length)
 		if err != nil {
 			return kdlrs, err
 		}
+		r := rune(bytes[len(bytes)-1])
 
-		for {
-			if r != dquote {
-				s.WriteRune(r)
-				break
-			}
-
-			var temp strings.Builder
-			tempCount := 0
-			temp.WriteRune(r)
-
-			for {
-				if tempCount == count {
-					return NewKDLRawString(key, s.String()), nil
-				}
-
-				r, err := kdlr.readRune()
-				if err != nil {
-					return kdlrs, err
-				}
-
-				if r != pound {
-					break
-				}
-
-				tempCount++
-				temp.WriteRune(r)
-			}
-
-			s.WriteString(temp.String())
+		if r == dquote {
+			dqStart = true
+			length++
+			continue
 		}
+
+		if dqStart && r == pound {
+			poundCount++
+		} else {
+			poundCount = 0
+			dqStart = false
+		}
+
+		if poundCount == count {
+			kdlr.discard(length)
+			return NewKDLRawString(key, string(bytes[start:len(bytes)-count-1])), nil
+		}
+
+		length++
 	}
 }
 

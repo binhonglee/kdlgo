@@ -25,7 +25,11 @@ func TestParseFromFile(t *testing.T) {
 		`"quoted node" "quoted value"`,
 		`"quoted node for numbers" 21 43 465 "string"`,
 		`smile "😁"`,
+		`!@#$@$%Q#$%~@!40 "1.2.3" { !!!!! true; }`,
 		`foo123~!@#$%^&*.:'|/?+ "weeee"`,
+		`ノード { お名前 "☜(ﾟヮﾟ☜)"; }`,
+		`foo { bar true; } "baz" { quux false; } 1 2 3`,
+		`key "value"`,
 		`test "value"`,
 	}
 
