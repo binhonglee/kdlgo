@@ -11,15 +11,16 @@ import (
 const (
 	eof = "EOF"
 
-	asterisk  = '*'
-	backslash = '\\'
-	dash      = '-'
-	dquote    = '"'
-	equals    = '='
-	newline   = '\n'
-	pound     = '#'
-	semicolon = ';'
-	slash     = '/'
+	asterisk   = '*'
+	backslash  = '\\'
+	dash       = '-'
+	dquote     = '"'
+	equals     = '='
+	newline    = '\n'
+	pound      = '#'
+	semicolon  = ';'
+	slash      = '/'
+	underscore = '_'
 
 	openBracket      = '{'
 	closeBracket     = '}'
@@ -175,11 +176,14 @@ func parseObject(kdlr *kdlReader) (KDLObject, error) {
 		}
 
 		obj, err := parseVal(kdlr, key, r)
+		if err != nil {
+			if err.Error() == kdlEndOfObj {
+				return ConvertToDocument(objects)
+			}
+			return nil, err
+		}
 		if !skipNext {
 			objects = append(objects, obj)
-		}
-		if err != nil {
-			return nil, err
 		}
 	}
 }
@@ -246,6 +250,10 @@ func parseVal(kdlr *kdlReader, key string, r rune) (KDLObject, error) {
 		return value, nil
 	}
 
+	if err.Error() == kdlEndOfObj {
+		return value, err
+	}
+
 	node, err := parseKey(kdlr)
 	if err != nil && err.Error() != KDLInvalidKeyChar {
 		if err.Error() == kdlKeyOnly {
@@ -291,6 +299,8 @@ func parseValue(kdlr *kdlReader, key string, r rune) (KDLObject, error) {
 	case openBracket:
 		kdlr.discard(1)
 		return parseObjects(kdlr, true, key)
+	case closeBracket:
+		return nil, endOfObjErr()
 	}
 
 	return nil, invalidSyntaxErr()
@@ -312,7 +322,7 @@ func parseQuotedString(kdlr *kdlReader) (string, error) {
 		bytes, err := kdlr.peekX(count)
 		if err != nil {
 			kdlr.discard(count)
-			return string(bytes[1:]), err
+			return stringEscape(string(bytes[1:])), err
 		}
 		r := rune(bytes[len(bytes)-1])
 
@@ -320,7 +330,7 @@ func parseQuotedString(kdlr *kdlReader) (string, error) {
 			bs, err := kdlr.peekX(count + 1)
 			if err != nil {
 				kdlr.discard(count)
-				return string(bytes[1:]), err
+				return stringEscape(string(bytes[1:])), err
 			}
 			next := bs[len(bs)-1] == byte(dquote)
 
@@ -333,6 +343,7 @@ func parseQuotedString(kdlr *kdlReader) (string, error) {
 		if r == dquote {
 			toRet := string(bytes[1 : len(bytes)-1])
 			temp, err := kdlr.peekX(count + 1)
+			toRet = stringEscape(toRet)
 			if err != nil {
 				if err.Error() != eof {
 
@@ -352,6 +363,10 @@ func parseQuotedString(kdlr *kdlReader) (string, error) {
 
 		count++
 	}
+}
+
+func stringEscape(s string) string {
+	return strings.ReplaceAll(s, "\\/", "/")
 }
 
 func parseRawString(kdlr *kdlReader, key string) (KDLRawString, error) {
@@ -423,6 +438,10 @@ func parseNumber(kdlr *kdlReader, key string, start rune) (KDLNumber, error) {
 		if err != nil && err.Error() != eof {
 			return kdlnum, err
 		}
+		if r == underscore {
+			kdlr.discard(1)
+			continue
+		}
 		if r != semicolon && r != newline && r != slash {
 			kdlr.discard(1)
 		}
@@ -431,7 +450,11 @@ func parseNumber(kdlr *kdlReader, key string, start rune) (KDLNumber, error) {
 			r == slash || (err != nil && err.Error() == eof) {
 			value, err := strconv.ParseFloat(val.String(), 64)
 			if err != nil {
-				return kdlnum, err
+				val, err := strconv.ParseInt(val.String(), 0, 10)
+				if err != nil {
+					return kdlnum, err
+				}
+				value = float64(val)
 			}
 			return NewKDLNumber(key, value), nil
 		}

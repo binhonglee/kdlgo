@@ -24,7 +24,10 @@ func (kdlr *kdlReader) readRune() (rune, error) {
 	} else {
 		kdlr.pos++
 	}
-	kdlr.current = r
+
+	if err == nil {
+		kdlr.current = r
+	}
 
 	return r, err
 }

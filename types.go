@@ -45,9 +45,9 @@ func (kdlValue KDLValue) RecreateKDL() (string, error) {
 		f64, _ := num.Float64()
 		return strconv.FormatFloat(f64, 'f', -1, 64), nil
 	case KDLStringType:
-		return strconv.Quote(kdlValue.String), nil
+		return RecreateString(kdlValue.String), nil
 	case KDLRawStringType:
-		return strconv.Quote(kdlValue.RawString), nil
+		return RecreateString(kdlValue.RawString), nil
 	case KDLDocumentType:
 		var s strings.Builder
 		for i, v := range kdlValue.Document {
@@ -78,6 +78,10 @@ func (kdlValue KDLValue) RecreateKDL() (string, error) {
 	default:
 		return "", invalidTypeErr()
 	}
+}
+
+func RecreateString(s string) string {
+	return strings.ReplaceAll(strconv.Quote(s), "/", "\\/")
 }
 
 func (kdlValue KDLValue) ToString() (string, error) {

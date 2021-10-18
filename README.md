@@ -26,3 +26,11 @@ To reach 1.0 parity
   - [ ] unsigned int
   - [ ] float
   - [ ] decimal
+
+- [ ] Pass the tests (I'm going through them in alphabetical order. If its not listed and its before the listed ones, its passing. If its after the listed ones, I've not looked into it.)
+  - [x] backslash_in_bare_id
+  - [ ] bare_arg
+  - [x] block_comment_before_node_no_space
+  - [ ] block_comment_before_node
+  - [x] commented_arg
+  - [ ] commented_child
