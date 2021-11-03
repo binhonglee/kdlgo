@@ -14,7 +14,7 @@ func TestSEMICOLONSEPARATE(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-
+		`node1;node2`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

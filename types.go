@@ -254,3 +254,22 @@ func (kdlNode KDLObjects) GetKey() string {
 func (kdlNode KDLObjects) GetValue() KDLValue {
 	return kdlNode.value
 }
+
+func (kdlObjs KDLObjects) ToObjMap() KDLObjectsMap {
+	ret := make(KDLObjectsMap)
+	for _, obj := range kdlObjs.GetValue().Objects {
+		ret[obj.GetKey()] = obj
+	}
+	return ret
+}
+
+func (kdlObjs KDLObjects) ToValueMap() KDLValuesMap {
+	ret := make(KDLValuesMap)
+	for _, obj := range kdlObjs.GetValue().Objects {
+		ret[obj.GetKey()] = obj.GetValue()
+	}
+	return ret
+}
+
+type KDLObjectsMap map[string]KDLObject
+type KDLValuesMap map[string]KDLValue

@@ -14,7 +14,7 @@ func TestQUESTIONMARKBEFORENUMBER(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-
+		`?15`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

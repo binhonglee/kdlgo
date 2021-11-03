@@ -14,7 +14,7 @@ func TestPRESERVENODEORDER(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-
+		`node2`,		`node5`,		`node1`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

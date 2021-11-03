@@ -14,7 +14,7 @@ func TestCOMMENTEDLINE(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-
+		`node_2`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

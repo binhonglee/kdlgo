@@ -14,7 +14,7 @@ func TestRAWNODENAME(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-
+		`"r\"\\node\""`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

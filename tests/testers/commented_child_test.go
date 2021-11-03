@@ -14,7 +14,7 @@ func TestCOMMENTEDCHI(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-
+		`node "arg"`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

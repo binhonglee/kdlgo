@@ -14,7 +14,7 @@ func TestQUOTEDNODENAME(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-
+		`0node`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

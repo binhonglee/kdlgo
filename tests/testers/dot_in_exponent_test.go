@@ -14,7 +14,7 @@ func TestDOTINEXPONENT(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-
+		``,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

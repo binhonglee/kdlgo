@@ -21,6 +21,7 @@ const (
 	semicolon  = ';'
 	slash      = '/'
 	underscore = '_'
+	space      = ' '
 
 	openBracket      = '{'
 	closeBracket     = '}'
@@ -197,7 +198,7 @@ func parseKey(kdlr *kdlReader) (string, error) {
 		r, err := kdlr.readRune()
 		if err != nil {
 			if err.Error() == eof {
-				err = unexpectedEOFErr()
+				return checkQuotedString(key), keyOnlyErr()
 			}
 			return key.String(), err
 		}
@@ -279,6 +280,19 @@ func parseVal(kdlr *kdlReader, key string, r rune) (KDLObject, error) {
 }
 
 func parseValue(kdlr *kdlReader, key string, r rune) (KDLObject, error) {
+	for {
+		if r != space {
+			break
+		}
+		kdlr.discard(1)
+
+		var err error
+		r, err = kdlr.peek()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if unicode.IsNumber(r) {
 		kdlr.discard(1)
 		return parseNumber(kdlr, key, r)

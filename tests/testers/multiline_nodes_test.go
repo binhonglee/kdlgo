@@ -14,7 +14,7 @@ func TestMULTILINENODES(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-
+		`node "arg1"`,		`arg2`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

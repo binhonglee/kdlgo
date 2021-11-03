@@ -14,7 +14,7 @@ func TestSLASHDASHCHI(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-		`node2`,
+		`node`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {
