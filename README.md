@@ -2,6 +2,8 @@
 
 Go parser for the [KDL Document Language](https://github.com/kdl-org/kdl).
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/binhonglee/kdlgo.svg)](https://pkg.go.dev/github.com/binhonglee/kdlgo)
+
 To reach 1.0 parity
 
 
