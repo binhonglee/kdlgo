@@ -14,7 +14,7 @@ func TestRAWSTRINGBACKSLASH(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-
+		`node "" { "n\""; }`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

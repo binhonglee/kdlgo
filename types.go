@@ -66,6 +66,9 @@ func (kdlValue KDLValue) RecreateKDL() (string, error) {
 	case KDLDefaultType:
 		return "", nil
 	case KDLObjectsType:
+		if len(kdlValue.Objects) < 1 {
+			return "", nil
+		}
 		var s strings.Builder
 		for _, obj := range kdlValue.Objects {
 			objStr, err := RecreateKDLObj(obj)

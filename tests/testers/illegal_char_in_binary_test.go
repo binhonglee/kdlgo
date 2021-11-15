@@ -14,7 +14,7 @@ func TestILLEGALCHARINBINARY(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-		``,
+		`node { ; } { bx01; }`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

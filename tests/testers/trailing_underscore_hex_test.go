@@ -14,7 +14,7 @@ func TestTRAILINGUNDERSCOREHEX(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-		``,
+		`node { ; } { x123abc_; }`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

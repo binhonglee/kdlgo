@@ -14,7 +14,7 @@ func TestMULTIPLEXINHEX(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-		``,
+		`node { ; } { xx10; }`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

@@ -14,7 +14,7 @@ func TestHEXINTUNDERSCORES(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-		``,
+		`node { ; } { xABC_def_0123; }`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

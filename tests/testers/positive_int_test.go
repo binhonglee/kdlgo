@@ -14,7 +14,7 @@ func TestPOSITIVEINT(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-		`+10`,
+		`node { +10; }`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

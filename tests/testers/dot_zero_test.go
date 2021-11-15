@@ -14,7 +14,7 @@ func TestDOTZERO(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-		`.0`,
+		`node { .0; }`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

@@ -14,7 +14,7 @@ func TestRAWSTRINGNEWLINE(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-
+		`node "" { hello; } { world; } { ; }`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

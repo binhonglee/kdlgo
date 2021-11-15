@@ -14,7 +14,7 @@ func TestUNDERSCOREINOCTA(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-		``,
+		`node { ; } { o012_3456_7; }`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

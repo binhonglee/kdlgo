@@ -14,7 +14,7 @@ func TestHEX(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-		``,
+		`node { ; } { xabcdef1234567890; }`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

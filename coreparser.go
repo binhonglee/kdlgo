@@ -11,14 +11,15 @@ const (
 	asterisk   = '*'
 	backslash  = '\\'
 	dash       = '-'
+	dot        = '.'
 	dquote     = '"'
 	equals     = '='
 	newline    = '\n'
 	pound      = '#'
 	semicolon  = ';'
 	slash      = '/'
-	underscore = '_'
 	space      = ' '
+	underscore = '_'
 
 	openBracket      = '{'
 	closeBracket     = '}'
@@ -215,8 +216,8 @@ func parseKey(kdlr *kdlReader) (string, error) {
 
 func parseVal(kdlr *kdlReader, key string, r rune) (KDLObject, error) {
 	value, err := parseValue(kdlr, key, r)
-	if err == nil {
-		return value, nil
+	if err == nil || err.Error() == KDLInvalidNumValue {
+		return value, err
 	}
 
 	if err.Error() == kdlEndOfObj {
@@ -224,15 +225,16 @@ func parseVal(kdlr *kdlReader, key string, r rune) (KDLObject, error) {
 	}
 
 	node, err := parseKey(kdlr)
+
 	if err != nil && err.Error() != KDLInvalidKeyChar {
 		if err.Error() == kdlKeyOnly {
-			return NewKDLDefault(node), nil
+			return NewKDLObjects(key, []KDLObject{NewKDLDefault(node)}), nil
 		}
 		return nil, err
 	}
 
 	if kdlr.lastRead() != equals {
-		return NewKDLDefault(node), nil
+		return NewKDLObjects(key, []KDLObject{NewKDLDefault(node)}), nil
 	}
 	r, err = kdlr.peek()
 	if err != nil {
@@ -262,8 +264,7 @@ func parseValue(kdlr *kdlReader, key string, r rune) (KDLObject, error) {
 	}
 
 	if unicode.IsNumber(r) {
-		kdlr.discard(1)
-		return parseNumber(kdlr, key, r)
+		return parseNumber(kdlr, key)
 	}
 
 	switch r {

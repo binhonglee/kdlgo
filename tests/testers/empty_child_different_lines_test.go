@@ -14,7 +14,7 @@ func TestEMPTYCHILDDIFFERENTLINES(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-		`node { }`,
+		`node`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

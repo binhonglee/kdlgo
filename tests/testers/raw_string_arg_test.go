@@ -14,7 +14,7 @@ func TestRAWSTRINGARG(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-
+		`node_1 "" { "g\\n\""; } { node_2; } "\"arg\\n\"and stuff"`,		`node_3 "#\"arg\\n\"#and stuff"`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

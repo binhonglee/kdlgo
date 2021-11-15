@@ -8,12 +8,13 @@ import (
 type KDLErrorType string
 
 const (
-	KDLEmptyArray     = "Array is empty"
-	KDLDifferentKey   = "All keys of KDLObject to convert to document should be the same"
-	KDLInvalidKeyChar = "Invalid character for key"
-	KDLInvalidSyntax  = "Invalid syntax"
-	KDLInvalidType    = "Invalid KDLType"
-	KDLUnexpectedEOF  = "Unexpected end of file"
+	KDLEmptyArray      = "Array is empty"
+	KDLDifferentKey    = "All keys of KDLObject to convert to document should be the same"
+	KDLInvalidKeyChar  = "Invalid character for key"
+	KDLInvalidNumValue = "Invalid numeric value"
+	KDLInvalidSyntax   = "Invalid syntax"
+	KDLInvalidType     = "Invalid KDLType"
+	KDLUnexpectedEOF   = "Unexpected end of file"
 
 	// These should be caught and handled internally
 	kdlKeyOnly     = "Internal only: Key only"
@@ -38,6 +39,10 @@ func emptyArrayErr() error {
 
 func invalidKeyCharErr() error {
 	return errors.New(KDLInvalidKeyChar)
+}
+
+func invalidNumValueErr() error {
+	return errors.New(KDLInvalidNumValue)
 }
 
 func invalidSyntaxErr() error {

@@ -30,9 +30,5 @@ To reach 1.0 parity
   - [ ] decimal
 
 - [ ] Pass the tests (I'm going through them in alphabetical order. If its not listed and its before the listed ones, its passing. If its after the listed ones, I've not looked into it.)
-  - [x] backslash_in_bare_id
-  - [ ] bare_arg
-  - [x] bare_emoji
-  - [x] ...
-  - [x] crlf_between_nodes
-  - [ ] dash_dash
+  - [x] empty_child_whitespace
+  - [ ] empty_quoted_node_id

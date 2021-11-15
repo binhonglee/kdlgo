@@ -14,7 +14,7 @@ func TestILLEGALCHARINOCTA(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-		``,
+		`node { ; } { o45678; }`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

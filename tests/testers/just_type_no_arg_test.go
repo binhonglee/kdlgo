@@ -14,7 +14,7 @@ func TestJUSTTYPENOARG(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-		`(type)`,
+		`node { (type); }`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

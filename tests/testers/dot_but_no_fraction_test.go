@@ -14,7 +14,7 @@ func TestDOTBUTNOFRACTION(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-		`node 1`,
+
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

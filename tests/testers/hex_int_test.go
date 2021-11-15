@@ -14,7 +14,7 @@ func TestHEXINT(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-		``,
+		`node { ; } { xABCDEF0123456789abcdef; }`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

@@ -14,7 +14,7 @@ func TestPARSEALLARGTYPES(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-
+		`node 1 1 10000000000 0.0000000001 1 7 2 "arg" "" { "g\\\\\""; } true false null`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

@@ -14,7 +14,7 @@ func TestBAREARG(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-		`a`,
+		`node { a; }`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

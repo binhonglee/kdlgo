@@ -138,38 +138,43 @@ func parseRawString(kdlr *kdlReader, key string) (KDLRawString, error) {
 	}
 }
 
-func parseNumber(kdlr *kdlReader, key string, start rune) (KDLNumber, error) {
+func parseNumber(kdlr *kdlReader, key string) (KDLNumber, error) {
 	var kdlnum KDLNumber
-	var val strings.Builder
-	val.WriteRune(start)
+	length := 0
+	dotCount := 0
 
 	for {
-		r, err := kdlr.peek()
+		length++
+		bytes, err := kdlr.peekX(length)
 		if err != nil && err.Error() != eof {
 			return kdlnum, err
 		}
-		if r == underscore {
-			kdlr.discard(1)
-			continue
-		}
-		if r != semicolon && r != newline && r != slash {
-			kdlr.discard(1)
+		r := rune(bytes[len(bytes)-1])
+		if r == dot {
+			dotCount++
+			if dotCount > 1 {
+				return kdlnum, invalidNumValueErr()
+			}
 		}
 
 		if r == semicolon || unicode.IsSpace(r) ||
 			r == slash || (err != nil && err.Error() == eof) {
-			value, err := strconv.ParseFloat(val.String(), 64)
+			rawStr := string(bytes[0 : len(bytes)-1])
+			if err != nil && err.Error() == eof {
+				rawStr = string(bytes)
+			}
+			str := strings.ReplaceAll(rawStr, "_", "")
+			value, err := strconv.ParseFloat(str, 64)
 			if err != nil {
-				val, err := strconv.ParseInt(val.String(), 0, 10)
+				val, err := strconv.ParseInt(str, 0, 10)
 				if err != nil {
 					return kdlnum, err
 				}
 				value = float64(val)
 			}
+			kdlr.discard(length - 1)
 			return NewKDLNumber(key, value), nil
 		}
-
-		val.WriteRune(r)
 	}
 }
 

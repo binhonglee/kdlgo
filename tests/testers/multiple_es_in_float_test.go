@@ -14,7 +14,7 @@ func TestMULTIPLEESINFLOAT(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-		``,
+		`node { ; } { .0E10e10; }`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

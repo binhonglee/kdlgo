@@ -14,7 +14,7 @@ func TestUNBALANCEDRAWHASHES(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-		`"##\"foo\"#"`,
+		`node { "##\"foo\"#"; }`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

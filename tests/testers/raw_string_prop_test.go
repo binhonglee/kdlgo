@@ -14,7 +14,7 @@ func TestRAWSTRINGPROP(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-
+		`node_1 { prop ""; } { "g\\n\""; } { node_2; } { prop "\"arg\"\\n"; }`,		`node_3 { prop "#\"arg\"#\\n"; }`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

@@ -14,7 +14,7 @@ func TestESCLINELINECOMMENT(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-
+		`node { //; } { comment; } "arg"`,		`"\"arg2"`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

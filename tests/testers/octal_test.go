@@ -14,7 +14,7 @@ func TestOCTA(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-		``,
+		`node { ; } { o76543210; }`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {

@@ -14,7 +14,7 @@ func TestUNDERSCOREATSTARTOFINT(t *testing.T) {
 		t.Fatal(err)
 	}
 	expected := []string{
-		`_15`,
+		`node { _15; }`,
 	}
 
 	if len(objs.GetValue().Objects) != len(expected) {
